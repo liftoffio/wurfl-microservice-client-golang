@@ -198,12 +198,6 @@ func (c *WmClient) SetCacheSize(uaMaxEntries int) {
 	c.deviceCache = lru.New(deviceDefaultCacheSize)
 }
 
-// SetupCache Deprecated: Use SetCacheSize()
-func (c *WmClient) SetupCache(deviceMaxEntries int, uaMaxEntries int) {
-	c.deviceCache = lru.New(deviceMaxEntries)
-	c.userAgentCache = lru.New(uaMaxEntries)
-}
-
 // clearCache Removes all entries from WM client cache, every cache is cleared using its own mutex, to avoid goroutines to use it while we are clearing it
 func (c *WmClient) clearCache() {
 
@@ -554,38 +548,6 @@ func (c *WmClient) SetHTTPTimeout(connection int, transfer int) {
 	}
 
 	c.httpClient = createHTTPClient(c.connTimeout, c.transferTimeout)
-
-}
-
-// GetAllMakeModel returns identity data for all devices in WM server
-// Deprecated since 1.2.0.0 in favour of GetAllDeviceMakes
-func (c *WmClient) GetAllMakeModel() ([]JSONMakeModel, error) {
-
-	// We lock the shared makeModel cache
-	c.mkMdMutex.Lock()
-	if c.mkModels != nil && len(c.mkModels) > 0 {
-		defer c.mkMdMutex.Unlock()
-		return c.mkModels, nil
-	}
-
-	// if makeModel cache is empty unlock it
-	c.mkMdMutex.Unlock()
-
-	mkModel := make([]JSONMakeModel, 1000)
-	var body, berr = c.internalGet("/v2/alldevices/json")
-	if berr != nil {
-		return nil, berr
-	}
-
-	var merror = json.Unmarshal(body, &mkModel)
-	if merror != nil {
-		return nil, merror
-	}
-
-	c.mkMdMutex.Lock()
-	c.mkModels = mkModel
-	c.mkMdMutex.Unlock()
-	return mkModel, nil
 
 }
 

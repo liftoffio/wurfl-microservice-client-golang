@@ -1,6 +1,6 @@
 # wmclient
 --
-    import "scientiamobile/wmclient"
+    import  "github.com/wurfl/wurfl-microservice-client-golang/v2/scientiamobile/wmclient"
 
 
 ## Usage
@@ -25,20 +25,6 @@ type JSONDeviceData struct {
 ```
 
 JSONDeviceData models a WURFL device data in JSON string only format
-
-#### type JSONDeviceDataTyped
-
-```go
-type JSONDeviceDataTyped struct {
-	APIVersion   string                 `json:"apiVersion"`
-	Capabilities map[string]interface{} `json:"capabilities"`
-	Error        string                 `json:"error, omitempty"`
-	Mtime        int64                  `json:"mtime"`
-	Ltime        string                 `json:"ltime"`
-}
-```
-
-JSONDeviceDataTyped models a WURFL device data in JSON typed format
 
 #### type JSONDeviceOsVersions
 
@@ -66,18 +52,6 @@ type JSONInfoData struct {
 ```
 
 JSONInfoData - server and API informations
-
-#### type JSONMakeModel
-
-```go
-type JSONMakeModel struct {
-	BrandName     string `json:"brand_name"`
-	ModelName     string `json:"model_name"`
-	MarketingName string `json:"marketing_name,omitempty"`
-}
-```
-
-JSONMakeModel models simple device "identity" data in JSON format
 
 #### type JSONModelMktName
 
@@ -156,14 +130,6 @@ func (c *WmClient) GetAllDevicesForMake(brandName string) ([]JSONModelMktName, e
 ```
 GetAllDevicesForMake returns a slice of an aggregate containing model_names and
 marketing_names for the given brand_name
-
-#### func (*WmClient) GetAllMakeModel
-
-```go
-func (c *WmClient) GetAllMakeModel() ([]JSONMakeModel, error)
-```
-GetAllMakeModel returns identity data for all devices in WM server Deprecated
-since 1.2.0.0 in favour of GetAllDeviceMakes
 
 #### func (*WmClient) GetAllOSes
 
@@ -262,10 +228,3 @@ return
 func (c *WmClient) SetRequestedVirtualCapabilities(CapsList []string)
 ```
 SetRequestedVirtualCapabilities - set list of virtual capabilities to return
-
-#### func (*WmClient) SetupCache
-
-```go
-func (c *WmClient) SetupCache(deviceMaxEntries int, uaMaxEntries int)
-```
-SetupCache Deprecated: Use SetCacheSize()

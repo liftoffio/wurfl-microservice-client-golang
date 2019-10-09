@@ -647,17 +647,6 @@ func TestDestroyConnection(t *testing.T) {
 	client.GetInfo()
 }
 
-func TestGetAllMakeModel(t *testing.T) {
-	client := createTestClient(t)
-	mkMds, err := client.GetAllMakeModel()
-	require.Nil(t, err)
-	require.NotNil(t, mkMds)
-	require.True(t, len(mkMds) > 20000)
-	require.NotNil(t, mkMds[0].BrandName)
-	require.NotNil(t, mkMds[0].ModelName)
-	client.DestroyConnection()
-}
-
 func TestGetAllDeviceMakes(t *testing.T) {
 	client := createTestClient(t)
 	jsonData, err := client.GetInfo()
