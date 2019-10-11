@@ -1,4 +1,4 @@
-# WM Golang Client API
+# ScientiaMobile WURFL Microservice Client for GO
 
 Golang implementation of the WM Client api
 
