@@ -9,7 +9,6 @@ This is the GO Client API for accessing the WURFL Microservice. The API is relea
 - WURFL Microservice for AWS: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/ 
 
 
-Golang implementation of the WM Client api
 
 Example api usage :
 
