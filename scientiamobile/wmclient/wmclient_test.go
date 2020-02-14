@@ -484,11 +484,11 @@ func TestLookupDeviceEmptyUseragent(t *testing.T) {
 	client := createTestClient(t)
 	jsonData, err := client.LookupUserAgent("")
 	require.NotNil(t, jsonData)
-	require.NotNil(t, err)
+	require.Nil(t, err)
 	did := jsonData.Capabilities
-	require.Nil(t, did)
-	require.True(t, len(did) == 0)
-	require.True(t, strings.Contains(err.Error(), "No User-Agent"))
+	require.NotNil(t, did)
+	require.True(t, len(did) > 0)
+	require.Equal(t, "generic", jsonData.Capabilities["wurfl_id"])
 	require.True(t, len(jsonData.APIVersion) > 0)
 	client.DestroyConnection()
 }
@@ -607,11 +607,11 @@ func TestLookupRequestWithNoHeaders(t *testing.T) {
 	jsonData, err := client.LookupRequest(*request)
 
 	require.NotNil(t, jsonData)
-	require.NotNil(t, err)
+	require.Nil(t, err)
 	did := jsonData.Capabilities
-	require.Nil(t, did)
+	require.NotNil(t, did)
 	require.True(t, len(jsonData.Error) == 0)
-	require.True(t, strings.Contains(err.Error(), "No User-Agent"))
+	require.Equal(t, "generic", jsonData.Capabilities["wurfl_id"])
 	client.DestroyConnection()
 }
 
