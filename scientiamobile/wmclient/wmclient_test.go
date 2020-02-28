@@ -62,11 +62,8 @@ func TestCreateWithWrongSchemeValue(t *testing.T) {
 }
 
 func TestCreateWithEmptyHost(t *testing.T) {
-	host, _ := getHostPortFromEnv()
-	if host != "localhost" {
-		t.Skip("TEST_WM_HOST env var is set and != localhost, nothing to test here...")
-	}
-	cl, err := Create("http", "", "8080", "")
+	_, port := getHostPortFromEnv()
+	cl, err := Create("http", "", port, "")
 	// This works because golang internal http client class assumes localhost when an empty host is provided
 	require.NotNil(t, cl)
 	require.Nil(t, err)
@@ -95,7 +92,7 @@ func TestHasStaticCapability(t *testing.T) {
 	client := createTestClient(t)
 	require.True(t, client.HasStaticCapability("brand_name"))
 	require.True(t, client.HasStaticCapability("model_name"))
-	require.True(t, client.HasStaticCapability("is_wireless_device"))
+	require.True(t, client.HasStaticCapability("is_smarttv"))
 	// this is a virtual capability, so it shouldn't be returned
 	require.False(t, client.HasStaticCapability("is_app"))
 	client.DestroyConnection()
@@ -215,10 +212,10 @@ func internalTestLookupUserAgent(t *testing.T, client *WmClient) {
 	require.NotNil(t, jsonData)
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
-	require.True(t, len(did) >= 43) // sum of caps, vcaps and 1 wurfl_id. 43 is the size of minimum capability set
+	require.True(t, len(did) > 0) // we just check that there are capabilities
 	require.Equal(t, did["model_name"], "SM-G950F")
-	require.Equal(t, "false", did["is_app"])
-	require.Equal(t, "false", did["is_app_webview"])
+	require.Equal(t, "false", did["is_robot"])
+	require.Equal(t, "false", did["is_full_desktop"])
 
 }
 
@@ -395,16 +392,16 @@ func internalTestLookupDeviceID(t *testing.T, client *WmClient) {
 	require.Nil(t, err)
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
-	require.True(t, len(did) >= 43)
-	require.Equal(t, "1", did["xhtml_support_level"])
-	require.Equal(t, "128", did["resolution_width"])
+	require.True(t, len(did) > 0)
+	require.Equal(t, "true", did["is_mobile"])
+	require.Equal(t, "Feature Phone", did["form_factor"])
 
 }
 
 func TestLookupDeviceIdWithSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
-	reqCaps := []string{"brand_name", "is_wireless_device"}
-	reqvCaps := []string{"is_app"}
+	reqCaps := []string{"brand_name", "is_smarttv"}
+	reqvCaps := []string{"form_factor"}
 	client.SetRequestedStaticCapabilities(reqCaps)
 	client.SetRequestedVirtualCapabilities(reqvCaps)
 	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
@@ -413,14 +410,14 @@ func TestLookupDeviceIdWithSpecificCaps(t *testing.T) {
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
 	require.Equal(t, "Opera", did["brand_name"])
-	require.Equal(t, "true", did["is_wireless_device"])
+	require.Equal(t, "false", did["is_smarttv"])
 	require.Equal(t, 4, len(did))
 	client.DestroyConnection()
 }
 
 func TestLookupDeviceIdWithSpecificCapsSingleMethods(t *testing.T) {
 	client := createTestClient(t)
-	reqCaps := []string{"brand_name", "is_wireless_device", "is_app", "is_app_webview"}
+	reqCaps := []string{"brand_name", "is_smarttv", "is_smartphone", "form_factor"}
 	client.SetRequestedCapabilities(reqCaps)
 	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
 	require.NotNil(t, jsonData)
@@ -428,14 +425,14 @@ func TestLookupDeviceIdWithSpecificCapsSingleMethods(t *testing.T) {
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
 	require.Equal(t, "Opera", did["brand_name"])
-	require.Equal(t, "true", did["is_wireless_device"])
+	require.Equal(t, "false", did["is_smarttv"])
 	require.Equal(t, 5, len(did))
 	client.DestroyConnection()
 }
 
 func TestLookupDeviceIdWithWrongSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
-	reqCaps := []string{"brand_name", "is_wireless_device", "nonexcap"}
+	reqCaps := []string{"brand_name", "is_smarttv", "nonexcap"}
 	client.SetRequestedStaticCapabilities(reqCaps)
 	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
 	require.NotNil(t, jsonData)
@@ -443,7 +440,7 @@ func TestLookupDeviceIdWithWrongSpecificCaps(t *testing.T) {
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
 	require.Equal(t, "Opera", did["brand_name"])
-	require.Equal(t, "true", did["is_wireless_device"])
+	require.Equal(t, "false", did["is_smarttv"])
 	require.Equal(t, "", did["nonexcap"])
 	require.Equal(t, 3, len(did)) // non existent cap now is discarded in SetRequiredStatic/VirtualCaps method
 	client.DestroyConnection()
@@ -495,8 +492,8 @@ func TestLookupDeviceEmptyUseragent(t *testing.T) {
 
 func TestLookupDeviceuseragentWithSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
-	reqCaps := []string{"brand_name", "is_wireless_device", "pointing_method", "model_name"}
-	client.SetRequestedStaticCapabilities(reqCaps)
+	reqCaps := []string{"brand_name", "marketing_name", "is_full_desktop", "model_name"}
+	client.SetRequestedCapabilities(reqCaps)
 	jsonData, err := client.LookupUserAgent("Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
@@ -504,7 +501,7 @@ func TestLookupDeviceuseragentWithSpecificCaps(t *testing.T) {
 	require.NotNil(t, did)
 	require.Equal(t, "Nintendo", did["brand_name"])
 	require.Equal(t, "Switch", did["model_name"])
-	require.Equal(t, "touchscreen", did["pointing_method"])
+	require.Equal(t, "false", did["is_full_desktop"])
 	require.Equal(t, 5, len(did))
 	client.DestroyConnection()
 
@@ -512,7 +509,7 @@ func TestLookupDeviceuseragentWithSpecificCaps(t *testing.T) {
 
 func TestLookupRequestWithSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
-	reqCaps := []string{"brand_name", "is_wireless_device", "pointing_method", "model_name"}
+	reqCaps := []string{"brand_name", "is_full_desktop", "is_robot", "model_name"}
 	client.SetRequestedCapabilities(reqCaps)
 
 	url := "http://vimeo.com/api/v2/brad/info.json"
@@ -531,8 +528,19 @@ func TestLookupRequestWithSpecificCaps(t *testing.T) {
 	require.NotNil(t, did)
 	require.Equal(t, "Nintendo", did["brand_name"])
 	require.Equal(t, "Switch", did["model_name"])
-	require.Equal(t, "touchscreen", did["pointing_method"])
+	require.Equal(t, "false", did["is_robot"])
+	require.Equal(t, "false", did["is_full_desktop"])
 	require.Equal(t, 5, len(did))
+
+	reqCaps = append(reqCaps, "is_smarttv")
+	client.SetRequestedCapabilities(reqCaps)
+	jsonData, err = client.LookupRequest(*request)
+
+	require.Nil(t, err)
+	did = jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, 6, len(did))
+
 	client.DestroyConnection()
 
 }
@@ -585,15 +593,14 @@ func TestLookupRequestWithCache(t *testing.T) {
 		require.NotNil(t, did)
 		require.Equal(t, "Samsung", did["brand_name"])
 		require.Equal(t, "GT-S5253", did["model_name"])
-		require.Equal(t, "touchscreen", did["pointing_method"])
-		require.True(t, len(did) >= 43)
+		require.Equal(t, "false", did["is_robot"])
+		require.True(t, len(did) > 0)
 		dCacheSize, uaCacheSize := client.GetActualCacheSizes()
 		require.Equal(t, 0, dCacheSize)
 		require.Equal(t, 1, uaCacheSize)
 
 	}
 	client.DestroyConnection()
-
 }
 
 func TestLookupRequestWithNoHeaders(t *testing.T) {
