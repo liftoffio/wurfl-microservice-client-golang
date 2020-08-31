@@ -74,7 +74,7 @@ type WmClient struct {
 
 // GetAPIVersion returns the version number of WM Client API
 func GetAPIVersion() string {
-	return "2.0.1"
+	return "2.1.0"
 }
 
 // creates a new http.Client with the specified timeouts
