@@ -504,7 +504,6 @@ func TestLookupDeviceuseragentWithSpecificCaps(t *testing.T) {
 	require.Equal(t, "false", did["is_full_desktop"])
 	require.Equal(t, 5, len(did))
 	client.DestroyConnection()
-
 }
 
 func TestLookupRequestWithSpecificCaps(t *testing.T) {
@@ -601,6 +600,81 @@ func TestLookupRequestWithCache(t *testing.T) {
 
 	}
 	client.DestroyConnection()
+}
+
+func TestLookupHeadersOk(t *testing.T) {
+	client := createTestClient(t)
+
+	// Let's create test headers
+	var headers = make(map[string]string, 4)
+	headers["X-Requested-With"] = "json_client"
+	headers["Content-Type"] = "application/json"
+	headers["Accept-Encoding"] = "gzip, deflate"
+	headers["X-UCBrowser-Device-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
+	headers["User-Agent"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
+
+	var jsonData *JSONDeviceData
+	var derr error
+	jsonData, derr = client.LookupHeaders(headers)
+
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	did := jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, "Samsung", did["brand_name"])
+	require.Equal(t, "GT-S5253", did["model_name"])
+	require.Equal(t, "false", did["is_robot"])
+	require.True(t, len(did) > 0)
+
+	client.DestroyConnection()
+}
+
+func TestLookupHeadersWithNilOrEmptyMap(t *testing.T) {
+	client := createTestClient(t)
+
+	var jsonData *JSONDeviceData
+	var derr error
+	jsonData, derr = client.LookupHeaders(nil)
+
+	// Passing a nil map should result in the creation of an empty request header map, thus in a "generic" device detection...
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	require.Equal(t, "generic", jsonData.Capabilities["wurfl_id"])
+
+	var headers = make(map[string]string, 0)
+	jsonData, derr = client.LookupHeaders(headers)
+
+	// ... the same result occurs if we pass an empty header map
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	require.Equal(t, "generic", jsonData.Capabilities["wurfl_id"])
+
+	client.DestroyConnection()
+}
+
+func TestLookupHeadersWithSpecificCaps(t *testing.T) {
+	client := createTestClient(t)
+	reqCaps := []string{"brand_name", "marketing_name", "is_full_desktop", "model_name"}
+	client.SetRequestedCapabilities(reqCaps)
+
+	var headers = make(map[string]string, 4)
+	headers["X-Requested-With"] = "json_client"
+	headers["Content-Type"] = "application/json"
+	headers["Accept-Encoding"] = "gzip, deflate"
+	headers["X-UCBrowser-Device-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
+	headers["User-Agent"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
+
+	jsonData, err := client.LookupHeaders(headers)
+	require.NotNil(t, jsonData)
+	require.Nil(t, err)
+	did := jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, "Samsung", did["brand_name"])
+	require.Equal(t, "GT-S5253", did["model_name"])
+	require.Equal(t, "false", did["is_full_desktop"])
+	require.Equal(t, 5, len(did))
+	client.DestroyConnection()
+
 }
 
 func TestLookupRequestWithNoHeaders(t *testing.T) {

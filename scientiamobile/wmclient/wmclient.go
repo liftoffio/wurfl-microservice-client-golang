@@ -74,7 +74,7 @@ type WmClient struct {
 
 // GetAPIVersion returns the version number of WM Client API
 func GetAPIVersion() string {
-	return "2.0.1"
+	return "2.1.0"
 }
 
 // creates a new http.Client with the specified timeouts
@@ -281,6 +281,53 @@ func (c *WmClient) LookupRequest(request http.Request) (*JSONDeviceData, error) 
 	for i := 0; i < len(c.ImportantHeaders); i++ {
 		name := c.ImportantHeaders[i]
 		h := request.Header.Get(name)
+		if h != "" {
+			jrequest.LookupHeaders[name] = h
+		}
+	}
+
+	// Do a cache lookup
+	if c.userAgentCache != nil {
+
+		c.lruUserAgentCS.Lock()
+		value, ok := c.userAgentCache.Get(c.getUserAgentCacheKey(jrequest.LookupHeaders))
+		c.lruUserAgentCS.Unlock()
+
+		if ok {
+			jdd := value.(*JSONDeviceData)
+			return jdd, nil
+		}
+	}
+
+	jrequest.RequestedCaps = c.requestedStaticCaps
+	jrequest.RequestedVCaps = c.requestedVirtualCaps
+
+	deviceData, err := c.internalLookup(jrequest, "/v2/lookuprequest/json")
+
+	if err == nil {
+		// check if server WURFL.xml has been updated and, if so, clear caches
+		c.clearCachesIfNeeded(deviceData.Ltime)
+
+		// lock and add element
+		if c.userAgentCache != nil {
+			c.lruUserAgentCS.Lock()
+			c.userAgentCache.Add(c.getUserAgentCacheKey(jrequest.LookupHeaders), deviceData)
+			c.lruUserAgentCS.Unlock()
+		}
+	}
+
+	return deviceData, err
+}
+
+// LookupHeaders - detects a device and returns its data in JSON format
+func (c *WmClient) LookupHeaders(headers map[string]string) (*JSONDeviceData, error) {
+
+	jrequest := Request{LookupHeaders: make(map[string]string)}
+
+	// copy headers
+	for i := 0; i < len(c.ImportantHeaders); i++ {
+		name := c.ImportantHeaders[i]
+		h := headers[name]
 		if h != "" {
 			jrequest.LookupHeaders[name] = h
 		}
