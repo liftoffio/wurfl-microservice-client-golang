@@ -629,6 +629,80 @@ func TestLookupHeadersOk(t *testing.T) {
 	client.DestroyConnection()
 }
 
+func TestLookupHeadersWithMixedCase(t *testing.T) {
+	client := createTestClient(t)
+
+	// Let's create test headers
+	var headers = make(map[string]string, 4)
+	headers["X-RequesTed-With"] = "json_client"
+	headers["Content-TYpe"] = "application/json"
+	headers["Accept-EnCoding"] = "gzip, deflate"
+	headers["X-UCBrowsEr-DeVice-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
+	headers["UseR-AgEnt"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
+
+	var jsonData *JSONDeviceData
+	var derr error
+	jsonData, derr = client.LookupHeaders(headers)
+
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	did := jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, "Samsung", did["brand_name"])
+	require.Equal(t, "GT-S5253", did["model_name"])
+	require.Equal(t, "false", did["is_robot"])
+	require.True(t, len(did) > 0)
+
+	client.DestroyConnection()
+}
+
+func TestLookupHeadersWithMixedCase_CachedClient(t *testing.T) {
+	client := createTestCachedClient(t)
+
+	// Let's create test headers
+	var headers = make(map[string]string, 4)
+	headers["X-RequesTed-With"] = "json_client"
+	headers["Content-TYpe"] = "application/json"
+	headers["Accept-EnCoding"] = "gzip, deflate"
+	headers["X-UCBrowsEr-DeVice-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
+	headers["UseR-AgEnt"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
+
+	var jsonData *JSONDeviceData
+	var derr error
+	jsonData, derr = client.LookupHeaders(headers)
+
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	did := jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, "Samsung", did["brand_name"])
+	require.Equal(t, "GT-S5253", did["model_name"])
+	require.Equal(t, "false", did["is_robot"])
+	require.True(t, len(did) > 0)
+	_, c := client.GetActualCacheSizes()
+	require.Equal(t, 1, c)
+
+	// let's retry mixing header case in a different way (now we'll have a cache hit)
+	headers = make(map[string]string, 4)
+	headers["X-ReqUesTed-With"] = "json_client"
+	headers["ConteNt-TYpe"] = "application/json"
+	headers["AccepT-EnCoding"] = "gzip, deflate"
+	headers["X-UCBrOwsEr-DeVice-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
+	headers["UseR-AgeNT"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
+
+	jsonData, derr = client.LookupHeaders(headers)
+	require.NotNil(t, jsonData)
+	require.Nil(t, derr)
+	did = jsonData.Capabilities
+	require.NotNil(t, did)
+	require.Equal(t, "Samsung", did["brand_name"])
+	// Same value as before, cache has been hit
+	_, c = client.GetActualCacheSizes()
+	require.Equal(t, 1, c)
+
+	client.DestroyConnection()
+}
+
 func TestLookupHeadersWithNilOrEmptyMap(t *testing.T) {
 	client := createTestClient(t)
 

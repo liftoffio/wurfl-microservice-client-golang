@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.1.1
+- Fixed issue in `LookupHeaders(map[string]string` when correct headers are passed using mixed case keys (ie: "UsEr-Agent")
+
 ### 2.1.0
 - Added `LookupHeaders(map[string]string` method to API
 

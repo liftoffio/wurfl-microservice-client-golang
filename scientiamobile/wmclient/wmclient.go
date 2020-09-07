@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -74,7 +75,7 @@ type WmClient struct {
 
 // GetAPIVersion returns the version number of WM Client API
 func GetAPIVersion() string {
-	return "2.1.0"
+	return "2.1.1"
 }
 
 // creates a new http.Client with the specified timeouts
@@ -324,10 +325,16 @@ func (c *WmClient) LookupHeaders(headers map[string]string) (*JSONDeviceData, er
 
 	jrequest := Request{LookupHeaders: make(map[string]string)}
 
+	// first: make all headers lowercase
+	var lowerKeyMap = make(map[string]string)
+	for k, v := range headers {
+		lowerKeyMap[strings.ToLower(k)] = v
+	}
+
 	// copy headers
 	for i := 0; i < len(c.ImportantHeaders); i++ {
 		name := c.ImportantHeaders[i]
-		h := headers[name]
+		h := lowerKeyMap[strings.ToLower(name)]
 		if h != "" {
 			jrequest.LookupHeaders[name] = h
 		}
