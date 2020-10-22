@@ -932,6 +932,12 @@ func TestCacheUsage(t *testing.T) {
 
 	// Add cache
 	client.SetCacheSize(10000)
+	// Fill cache
+	for i := 0; i < lookupCount; i++ {
+		client.LookupUserAgent(ua)
+	}
+
+	// Measure cache
 	start = time.Now().UnixNano()
 	for i := 0; i < lookupCount; i++ {
 		client.LookupUserAgent(ua)
