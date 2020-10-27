@@ -158,6 +158,28 @@ func main() {
 }
 ```
 
+You can use all the HTTP request headers to perform the detection:
+
+```go
+request, err := http.NewRequest("GET", "www.gitub.com", nil)
+	if err == nil {
+		request.Header.Add("Content-Type", "application/json")
+		request.Header.Add("Accept", "text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/webp, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1")
+		request.Header.Add("Accept-Encoding", "gzip, deflate")
+		request.Header.Add("Accept-Language", "en")
+		request.Header.Add("Device-Stock-Ua", "Mozilla/5.0 (Linux; Android 8.1.0; SM-J610G Build/M1AJQ; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+		request.Header.Add("Forwarded", "for=\"110.54.224.195:36350\"")
+		request.Header.Add("Referer", "https://www.cram.com/flashcards/labor-and-delivery-questions-889210")
+		request.Header.Add("User-Agent", "Opera/9.80 (Android; Opera Mini/51.0.2254/184.121; U; en) Presto/2.12.423 Version/12.16")
+		request.Header.Add("X-Clacks-Overhead", "GNU ph")
+		request.Header.Add("X-Forwarded-For", "110.54.224.195, 82.145.210.235")
+		request.Header.Add("X-Operamini-Features", "advanced, camera, download, file_system, folding, httpping, pingback, routing, touch, viewport")
+		request.Header.Add("X-Operamini-Phone", "Android #")
+		request.Header.Add("X-Operamini-Phone-Ua", "Mozilla/5.0 (Linux; Android 8.1.0; SM-J610G Build/M1AJQ; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+	}
+
+	JSONDeviceData, callerr := ClientConn.LookupRequest(*request)
+```
 
 # wmclient APIs
 
