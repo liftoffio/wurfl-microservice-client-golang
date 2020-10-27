@@ -18,6 +18,7 @@ package wmclient
 import (
 	"bufio"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"os"
 	"strings"
@@ -914,4 +915,36 @@ func TestMd5KeyCreation(t *testing.T) {
 	md5k := client.getUserAgentCacheKey(m)
 	require.NotNil(t, md5k)
 	require.Equal(t, 32, len(md5k))
+}
+
+func TestCacheUsage(t *testing.T) {
+	client := createTestClient(t)
+	ua := "Mozilla/5.0 (Linux; Android 4.4.4; SmartTV Build/KTU84P), AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.132, _STB_C001_2017/0.9 (NETRANGEMMH, ExpressLuck, Wired)"
+
+	// perform 10K detections without cache
+	lookupCount := 10000
+	start := time.Now().UnixNano()
+	for i := 0; i < lookupCount; i++ {
+		client.LookupUserAgent(ua)
+	}
+	totalDetectionTime := time.Now().UnixNano() - start
+	avgDetectionTime := float64(totalDetectionTime) / float64(lookupCount)
+
+	// Add cache
+	client.SetCacheSize(10000)
+	// Fill cache
+	for i := 0; i < lookupCount; i++ {
+		client.LookupUserAgent(ua)
+	}
+
+	// Measure cache
+	start = time.Now().UnixNano()
+	for i := 0; i < lookupCount; i++ {
+		client.LookupUserAgent(ua)
+	}
+	totalCacheTime := time.Now().UnixNano() - start
+	avgCacheTime := float64(totalCacheTime) / float64(lookupCount)
+	// cache time must be at least an order of magnitude faster than non cached detection
+	assert.True(t, avgDetectionTime > avgCacheTime*10)
+
 }

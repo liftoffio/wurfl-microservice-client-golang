@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"sort"
 	"strings"
 
@@ -70,10 +71,29 @@ func main() {
 	ClientConn.SetRequestedStaticCapabilities(sCapsList)
 	ClientConn.SetRequestedVirtualCapabilities(vCapsList)
 
-	ua := "Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3"
-
+	// ua := "Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3"
 	// Perform a device detection calling WM server API
-	JSONDeviceData, callerr := ClientConn.LookupUserAgent(ua)
+	// JSONDeviceData, callerr := ClientConn.LookupUserAgent(ua)
+
+	// or use the a http request struct to perform the detection.
+	request, err := http.NewRequest("GET", "www.gitub.com", nil)
+	if err == nil {
+		request.Header.Add("Content-Type", "application/json")
+		request.Header.Add("Accept", "text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/webp, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1")
+		request.Header.Add("Accept-Encoding", "gzip, deflate")
+		request.Header.Add("Accept-Language", "en")
+		request.Header.Add("Device-Stock-Ua", "Mozilla/5.0 (Linux; Android 8.1.0; SM-J610G Build/M1AJQ; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+		request.Header.Add("Forwarded", "for=\"110.54.224.195:36350\"")
+		request.Header.Add("Referer", "https://www.cram.com/flashcards/labor-and-delivery-questions-889210")
+		request.Header.Add("User-Agent", "Opera/9.80 (Android; Opera Mini/51.0.2254/184.121; U; en) Presto/2.12.423 Version/12.16")
+		request.Header.Add("X-Clacks-Overhead", "GNU ph")
+		request.Header.Add("X-Forwarded-For", "110.54.224.195, 82.145.210.235")
+		request.Header.Add("X-Operamini-Features", "advanced, camera, download, file_system, folding, httpping, pingback, routing, touch, viewport")
+		request.Header.Add("X-Operamini-Phone", "Android #")
+		request.Header.Add("X-Operamini-Phone-Ua", "Mozilla/5.0 (Linux; Android 8.1.0; SM-J610G Build/M1AJQ; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+	}
+
+	JSONDeviceData, callerr := ClientConn.LookupRequest(*request)
 
 	if callerr != nil {
 		// Applicative error, ie: invalid input provided
