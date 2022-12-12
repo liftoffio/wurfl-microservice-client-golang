@@ -17,6 +17,7 @@ package wmclient
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -145,7 +146,7 @@ func TestSetRequestedCapabilities(t *testing.T) {
 	client.SetRequestedVirtualCapabilities([]string{"is_ios", "invalid_name2", "brand_name"})
 
 	ua := "Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1"
-	device, err := client.LookupUserAgent(ua)
+	device, err := client.LookupUserAgent(context.Background(), ua)
 	require.Nil(t, err)
 	require.NotNil(t, device)
 	// 1 cap, 1 vcap + wurfl_id
@@ -153,10 +154,10 @@ func TestSetRequestedCapabilities(t *testing.T) {
 	_, ok := device.Capabilities["invalid_name1"]
 	require.False(t, ok) // this cap has been discarded because it does not exist
 	client.SetRequestedStaticCapabilities(nil)
-	device, _ = client.LookupUserAgent(ua)
+	device, _ = client.LookupUserAgent(context.Background(), ua)
 	require.Equal(t, 2, len(device.Capabilities))
 	client.SetRequestedVirtualCapabilities(nil)
-	device, _ = client.LookupUserAgent(ua)
+	device, _ = client.LookupUserAgent(context.Background(), ua)
 	// resetting all required caps arrays, ALL available caps are returned
 	require.True(t, len(device.Capabilities) > 0, "len(device.Capabilities) > 0 failed")
 
@@ -164,7 +165,7 @@ func TestSetRequestedCapabilities(t *testing.T) {
 	client.SetRequestedStaticCapabilities([]string{"brand_name", "invalid_name1", "is_ios"})
 	client.SetRequestedVirtualCapabilities([]string{"is_ios", "invalid_name2", "brand_name"})
 	client.SetRequestedCapabilities(nil)
-	device, _ = client.LookupUserAgent(ua)
+	device, _ = client.LookupUserAgent(context.Background(), ua)
 
 	require.True(t, len(device.Capabilities) > 0, "len(device.Capabilities) > 0 failed")
 
@@ -177,7 +178,7 @@ func TestResetCacheOnRequestedCapsChange(t *testing.T) {
 	reqCaps := []string{"brand_name", "is_wireless_device", "is_app"}
 	client.SetRequestedCapabilities(reqCaps)
 	ua := "Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1"
-	d, derr := client.LookupUserAgent(ua)
+	d, derr := client.LookupUserAgent(context.Background(), ua)
 	require.NotNil(t, d)
 	require.Nil(t, derr)
 	dc, uac := client.GetActualCacheSizes()
@@ -190,7 +191,7 @@ func TestResetCacheOnRequestedCapsChange(t *testing.T) {
 	require.Equal(t, 0, dc)
 	require.Equal(t, 0, uac)
 
-	d, _ = client.LookupUserAgent(ua)
+	d, _ = client.LookupUserAgent(context.Background(), ua)
 	dc, uac = client.GetActualCacheSizes()
 	require.Equal(t, 1, uac)
 	reqCaps = []string{"brand_name", "is_wireless_device"}
@@ -209,7 +210,7 @@ func TestResetCacheOnRequestedCapsChange(t *testing.T) {
 func internalTestLookupUserAgent(t *testing.T, client *WmClient) {
 
 	ua := "Mozilla/5.0 (Linux; Android 7.0; SAMSUNG SM-G950F Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/5.2 Chrome/51.0.2704.106 Mobile Safari/537.36"
-	jsonData, _ := client.LookupUserAgent(ua)
+	jsonData, _ := client.LookupUserAgent(context.Background(), ua)
 	require.NotNil(t, jsonData)
 	did := jsonData.Capabilities
 	require.NotNil(t, did)
@@ -229,11 +230,11 @@ func TestSingleLookupDeviceId(t *testing.T) {
 func TestSingleLookupDeviceIdWithCacheExpiration(t *testing.T) {
 	client := createTestCachedClient(t)
 
-	d1, err := client.LookupDeviceID("nokia_generic_series40")
+	d1, err := client.LookupDeviceID(context.Background(), "nokia_generic_series40")
 	require.Nil(t, err)
 	require.NotNil(t, d1)
 
-	d2, err2 := client.LookupUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1")
+	d2, err2 := client.LookupUserAgent(context.Background(), "Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1")
 	require.Nil(t, err2)
 	require.NotNil(t, d2)
 
@@ -252,8 +253,8 @@ func TestSingleLookupDeviceIdWithCacheExpiration(t *testing.T) {
 	require.Equal(t, 0, uac)
 
 	// Load a device again
-	d1, _ = client.LookupDeviceID("nokia_generic_series40")
-	d2, _ = client.LookupUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1")
+	d1, _ = client.LookupDeviceID(context.Background(), "nokia_generic_series40")
+	d2, _ = client.LookupUserAgent(context.Background(), "Mozilla/5.0 (iPhone; CPU iPhone OS 10_2_1 like Mac OS X) AppleWebKit/602.4.6 (KHTML, like Gecko) Version/10.0 Mobile/14D27 Safari/602.1")
 
 	// caches are filled again
 	dc, uac = client.GetActualCacheSizes()
@@ -341,14 +342,14 @@ func mtLookup(t *testing.T, client *WmClient, done chan bool) {
 			continue
 		}
 
-		d, err := client.LookupUserAgent(ua)
+		d, err := client.LookupUserAgent(context.Background(), ua)
 
 		if err != nil {
 			fmt.Printf("ClientConn.LookupUserAgent(%s) returned %s\n", ua, err.Error())
 			break
 		}
 
-		d, err = client.LookupDeviceID(d.Capabilities["wurfl_id"])
+		d, err = client.LookupDeviceID(context.Background(), d.Capabilities["wurfl_id"])
 
 		if err != nil {
 			fmt.Printf("ClientConn.LookupDeviceID(%s) returned %s\n", ua, err.Error())
@@ -388,7 +389,7 @@ func TestMultipleLookupDeviceId(t *testing.T) {
 
 func internalTestLookupDeviceID(t *testing.T, client *WmClient) {
 
-	jsonData, err := client.LookupDeviceID("nokia_generic_series40")
+	jsonData, err := client.LookupDeviceID(context.Background(), "nokia_generic_series40")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -405,7 +406,7 @@ func TestLookupDeviceIdWithSpecificCaps(t *testing.T) {
 	reqvCaps := []string{"form_factor"}
 	client.SetRequestedStaticCapabilities(reqCaps)
 	client.SetRequestedVirtualCapabilities(reqvCaps)
-	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
+	jsonData, err := client.LookupDeviceID(context.Background(), "generic_opera_mini_version1")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -420,7 +421,7 @@ func TestLookupDeviceIdWithSpecificCapsSingleMethods(t *testing.T) {
 	client := createTestClient(t)
 	reqCaps := []string{"brand_name", "is_smarttv", "is_smartphone", "form_factor"}
 	client.SetRequestedCapabilities(reqCaps)
-	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
+	jsonData, err := client.LookupDeviceID(context.Background(), "generic_opera_mini_version1")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -435,7 +436,7 @@ func TestLookupDeviceIdWithWrongSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
 	reqCaps := []string{"brand_name", "is_smarttv", "nonexcap"}
 	client.SetRequestedStaticCapabilities(reqCaps)
-	jsonData, err := client.LookupDeviceID("generic_opera_mini_version1")
+	jsonData, err := client.LookupDeviceID(context.Background(), "generic_opera_mini_version1")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -449,7 +450,7 @@ func TestLookupDeviceIdWithWrongSpecificCaps(t *testing.T) {
 
 func TestLookupDeviceIdWithWrongId(t *testing.T) {
 	client := createTestClient(t)
-	jsonData, err := client.LookupDeviceID("nokia_generic_series40_wrong")
+	jsonData, err := client.LookupDeviceID(context.Background(), "nokia_generic_series40_wrong")
 	require.NotNil(t, jsonData)
 	require.NotNil(t, err)
 	did := jsonData.Capabilities
@@ -464,7 +465,7 @@ func TestLookupDeviceIdWithWrongId(t *testing.T) {
 
 func TestLookupDeviceIdWithEmptyId(t *testing.T) {
 	client := createTestClient(t)
-	jsonData, err := client.LookupDeviceID("")
+	jsonData, err := client.LookupDeviceID(context.Background(), "")
 	require.NotNil(t, jsonData)
 	require.NotNil(t, err)
 	did := jsonData.Capabilities
@@ -480,7 +481,7 @@ func TestLookupDeviceIdWithEmptyId(t *testing.T) {
 
 func TestLookupDeviceEmptyUseragent(t *testing.T) {
 	client := createTestClient(t)
-	jsonData, err := client.LookupUserAgent("")
+	jsonData, err := client.LookupUserAgent(context.Background(), "")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -495,7 +496,7 @@ func TestLookupDeviceuseragentWithSpecificCaps(t *testing.T) {
 	client := createTestClient(t)
 	reqCaps := []string{"brand_name", "marketing_name", "is_full_desktop", "model_name"}
 	client.SetRequestedCapabilities(reqCaps)
-	jsonData, err := client.LookupUserAgent("Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341")
+	jsonData, err := client.LookupUserAgent(context.Background(), "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341")
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -616,7 +617,7 @@ func TestLookupHeadersOk(t *testing.T) {
 
 	var jsonData *JSONDeviceData
 	var derr error
-	jsonData, derr = client.LookupHeaders(headers)
+	jsonData, derr = client.LookupHeaders(context.Background(), headers)
 
 	require.NotNil(t, jsonData)
 	require.Nil(t, derr)
@@ -643,7 +644,7 @@ func TestLookupHeadersWithMixedCase(t *testing.T) {
 
 	var jsonData *JSONDeviceData
 	var derr error
-	jsonData, derr = client.LookupHeaders(headers)
+	jsonData, derr = client.LookupHeaders(context.Background(), headers)
 
 	require.NotNil(t, jsonData)
 	require.Nil(t, derr)
@@ -670,7 +671,7 @@ func TestLookupHeadersWithMixedCase_CachedClient(t *testing.T) {
 
 	var jsonData *JSONDeviceData
 	var derr error
-	jsonData, derr = client.LookupHeaders(headers)
+	jsonData, derr = client.LookupHeaders(context.Background(), headers)
 
 	require.NotNil(t, jsonData)
 	require.Nil(t, derr)
@@ -691,7 +692,7 @@ func TestLookupHeadersWithMixedCase_CachedClient(t *testing.T) {
 	headers["X-UCBrOwsEr-DeVice-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
 	headers["UseR-AgeNT"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
 
-	jsonData, derr = client.LookupHeaders(headers)
+	jsonData, derr = client.LookupHeaders(context.Background(), headers)
 	require.NotNil(t, jsonData)
 	require.Nil(t, derr)
 	did = jsonData.Capabilities
@@ -709,7 +710,7 @@ func TestLookupHeadersWithNilOrEmptyMap(t *testing.T) {
 
 	var jsonData *JSONDeviceData
 	var derr error
-	jsonData, derr = client.LookupHeaders(nil)
+	jsonData, derr = client.LookupHeaders(context.Background(), nil)
 
 	// Passing a nil map should result in the creation of an empty request header map, thus in a "generic" device detection...
 	require.NotNil(t, jsonData)
@@ -717,7 +718,7 @@ func TestLookupHeadersWithNilOrEmptyMap(t *testing.T) {
 	require.Equal(t, "generic", jsonData.Capabilities["wurfl_id"])
 
 	var headers = make(map[string]string, 0)
-	jsonData, derr = client.LookupHeaders(headers)
+	jsonData, derr = client.LookupHeaders(context.Background(), headers)
 
 	// ... the same result occurs if we pass an empty header map
 	require.NotNil(t, jsonData)
@@ -739,7 +740,7 @@ func TestLookupHeadersWithSpecificCaps(t *testing.T) {
 	headers["X-UCBrowser-Device-UA"] = "Mozilla/5.0 (SAMSUNG; SAMSUNG-GT-S5253/S5253DDJI7; U; Bada/1.0; en-us) AppleWebKit/533.1 (KHTML, like Gecko) Dolfin/2.0 Mobile WQVGA SMM-MMS/1.2.0 OPN-B"
 	headers["User-Agent"] = "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341"
 
-	jsonData, err := client.LookupHeaders(headers)
+	jsonData, err := client.LookupHeaders(context.Background(), headers)
 	require.NotNil(t, jsonData)
 	require.Nil(t, err)
 	did := jsonData.Capabilities
@@ -925,7 +926,7 @@ func TestCacheUsage(t *testing.T) {
 	lookupCount := 10000
 	start := time.Now().UnixNano()
 	for i := 0; i < lookupCount; i++ {
-		client.LookupUserAgent(ua)
+		client.LookupUserAgent(context.Background(), ua)
 	}
 	totalDetectionTime := time.Now().UnixNano() - start
 	avgDetectionTime := float64(totalDetectionTime) / float64(lookupCount)
@@ -934,13 +935,13 @@ func TestCacheUsage(t *testing.T) {
 	client.SetCacheSize(10000)
 	// Fill cache
 	for i := 0; i < lookupCount; i++ {
-		client.LookupUserAgent(ua)
+		client.LookupUserAgent(context.Background(), ua)
 	}
 
 	// Measure cache
 	start = time.Now().UnixNano()
 	for i := 0; i < lookupCount; i++ {
-		client.LookupUserAgent(ua)
+		client.LookupUserAgent(context.Background(), ua)
 	}
 	totalCacheTime := time.Now().UnixNano() - start
 	avgCacheTime := float64(totalCacheTime) / float64(lookupCount)

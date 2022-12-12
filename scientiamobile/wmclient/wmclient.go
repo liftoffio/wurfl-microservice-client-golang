@@ -17,6 +17,7 @@ package wmclient
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -75,7 +76,7 @@ type WmClient struct {
 
 // GetAPIVersion returns the version number of WM Client API
 func GetAPIVersion() string {
-	return "2.1.2"
+	return "2.1.3"
 }
 
 // creates a new http.Client with the specified timeouts
@@ -303,7 +304,7 @@ func (c *WmClient) LookupRequest(request http.Request) (*JSONDeviceData, error) 
 	jrequest.RequestedCaps = c.requestedStaticCaps
 	jrequest.RequestedVCaps = c.requestedVirtualCaps
 
-	deviceData, err := c.internalLookup(jrequest, "/v2/lookuprequest/json")
+	deviceData, err := c.internalLookup(request.Context(), jrequest, "/v2/lookuprequest/json")
 
 	if err == nil {
 		// check if server WURFL.xml has been updated and, if so, clear caches
@@ -321,7 +322,7 @@ func (c *WmClient) LookupRequest(request http.Request) (*JSONDeviceData, error) 
 }
 
 // LookupHeaders - detects a device and returns its data in JSON format
-func (c *WmClient) LookupHeaders(headers map[string]string) (*JSONDeviceData, error) {
+func (c *WmClient) LookupHeaders(ctx context.Context, headers map[string]string) (*JSONDeviceData, error) {
 
 	jrequest := Request{LookupHeaders: make(map[string]string)}
 
@@ -356,7 +357,7 @@ func (c *WmClient) LookupHeaders(headers map[string]string) (*JSONDeviceData, er
 	jrequest.RequestedCaps = c.requestedStaticCaps
 	jrequest.RequestedVCaps = c.requestedVirtualCaps
 
-	deviceData, err := c.internalLookup(jrequest, "/v2/lookuprequest/json")
+	deviceData, err := c.internalLookup(ctx, jrequest, "/v2/lookuprequest/json")
 
 	if err == nil {
 		// check if server WURFL.xml has been updated and, if so, clear caches
@@ -374,7 +375,7 @@ func (c *WmClient) LookupHeaders(headers map[string]string) (*JSONDeviceData, er
 }
 
 // LookupUserAgent - Searches WURFL device data using the given user-agent for detection
-func (c *WmClient) LookupUserAgent(userAgent string) (*JSONDeviceData, error) {
+func (c *WmClient) LookupUserAgent(ctx context.Context, userAgent string) (*JSONDeviceData, error) {
 
 	// First: cache lookup
 	headers := map[string]string{userAgentHeader: userAgent}
@@ -398,7 +399,7 @@ func (c *WmClient) LookupUserAgent(userAgent string) (*JSONDeviceData, error) {
 	jsonRequest.RequestedCaps = c.requestedStaticCaps
 	jsonRequest.RequestedVCaps = c.requestedVirtualCaps
 
-	deviceData, err := c.internalLookup(jsonRequest, "/v2/lookupuseragent/json")
+	deviceData, err := c.internalLookup(ctx, jsonRequest, "/v2/lookupuseragent/json")
 	if err == nil {
 		// check if server WURFL.xml has been updated and, if so, clear caches
 		c.clearCachesIfNeeded(deviceData.Ltime)
@@ -415,7 +416,7 @@ func (c *WmClient) LookupUserAgent(userAgent string) (*JSONDeviceData, error) {
 }
 
 // LookupDeviceID - Searches WURFL device data using its wurfl_id value
-func (c *WmClient) LookupDeviceID(deviceID string) (*JSONDeviceData, error) {
+func (c *WmClient) LookupDeviceID(ctx context.Context, deviceID string) (*JSONDeviceData, error) {
 
 	// First: cache lookup
 	if c.deviceCache != nil {
@@ -434,7 +435,7 @@ func (c *WmClient) LookupDeviceID(deviceID string) (*JSONDeviceData, error) {
 	jsonRequest.RequestedCaps = c.requestedStaticCaps
 	jsonRequest.RequestedVCaps = c.requestedVirtualCaps
 
-	deviceData, err := c.internalLookup(jsonRequest, "/v2/lookupdeviceid/json")
+	deviceData, err := c.internalLookup(ctx, jsonRequest, "/v2/lookupdeviceid/json")
 	if err == nil {
 
 		// check if server WURFL.xml has been updated and, if so, clear caches
@@ -523,7 +524,7 @@ func (c *WmClient) internalGet(endpoint string) ([]byte, error) {
 	return body, nil
 }
 
-func (c *WmClient) internalLookup(request Request, path string) (*JSONDeviceData, error) {
+func (c *WmClient) internalLookup(ctx context.Context, request Request, path string) (*JSONDeviceData, error) {
 	var deviceData = JSONDeviceData{}
 	url := c.createURL(path)
 
@@ -539,7 +540,7 @@ func (c *WmClient) internalLookup(request Request, path string) (*JSONDeviceData
 
 	httpreq.Header.Set("User-Agent", getWmClientUserAgent(httpreq.UserAgent()))
 
-	res, err := c.httpClient.Do(httpreq)
+	res, err := c.httpClient.Do(httpreq.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
